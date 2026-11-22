@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoPuntos — Contenedores Inteligentes | Huaraz, Perú</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Librería QRCode.js real y escaneable por cualquier cámara móvil -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        eco: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            300: '#6ee7b7',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    animation: {
+                        'scan-line': 'scanLine 2s ease-in-out infinite',
+                        'bounce-short': 'bounceShort 0.5s ease-out',
+                    },
+                    keyframes: {
+                        scanLine: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(110px)' },
+                        },
+                        bounceShort: {
+                            '0%': { transform: 'scale(0.95)', opacity: '0.7' },
+                            '60%': { transform: 'scale(1.03)', opacity: '1' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .qr-pattern {
+            background-image: radial-gradient(#065f46 1.5px, transparent 1.5px);
+            background-size: 14px 14px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-eco-500 selection:text-white">
+
+    <!-- Contenedor de Notificaciones Toast (Reemplaza alert()) -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16 sm:h-20">
+                <!-- Logo y Marca -->
+                <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                    <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-eco-500 to-eco-700 flex items-center justify-center text-white shadow-md shadow-eco-500/20">
+                        <i class="fa-solid fa-recycle text-xl sm:text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-display font-extrabold text-xl sm:text-2xl tracking-tight text-slate-900">Eco<span class="text-eco-600">Puntos</span></span>
+                            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-eco-100 text-eco-800">Huaraz</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 hidden sm:block">Contenedores Inteligentes • Recicla y Gana</p>
+                    </div>
+                </div>
+
+                <!-- Acciones Rápidas / Estado de Sesión -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Saldo Rápido en Header (Visible cuando hay sesión) -->
+                    <div id="header-points-badge" class="hidden items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl shadow-sm">
+                        <i class="fa-solid fa-coins text-gold-500 text-sm sm:text-base"></i>
+                        <div class="leading-tight">
+                            <span id="header-points-value" class="font-display font-extrabold text-sm sm:text-base text-slate-900">0</span>
+                            <span class="text-[11px] font-bold text-amber-700 uppercase ml-0.5">pts</span>
+                        </div>
+                    </div>
+
+                    <!-- Botón QR Contenedor (Siempre visible para presentación) -->
+                    <button onclick="openContainerQrPoster()" title="Generar enlace y código QR para pegar en el contenedor" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold bg-eco-600 hover:bg-eco-700 text-white transition shadow-sm active:scale-95">
+                        <i class="fa-solid fa-qrcode"></i>
+                        <span>QR Contenedor</span>
+                    </button>
+
+                    <!-- Botón Modo Presentación / Demo Rápida -->
+                    <button onclick="activateDemoMode()" title="Cargar perfil de demostración (Valeria Rojas)" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white transition shadow-sm active:scale-95">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                        <span class="hidden sm:inline">Modo Demo</span>
+                    </button>
+
+                    <!-- Botón Cerrar Sesión / Cambiar Usuario -->
+                    <button id="btn-logout" onclick="logoutUser()" class="hidden items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 transition">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span class="hidden md:inline">Salir</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación Secundaria (Tabs para Móvil y Desktop cuando está logueado) -->
+        <nav id="main-nav" class="hidden bg-slate-50/90 border-t border-slate-200/80 overflow-x-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 sm:gap-2 py-2">
+                <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn active flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">
+                    <i class="fa-solid fa-id-card"></i> Mi Carnet QR y Saldo
+                </button>
+                <button onclick="switchTab('simulator')" data-tab="simulator" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">
+                    <i class="fa-solid fa-microchip"></i> Simulador Contenedor
+                </button>
+                <button onclick="switchTab('rewards')" data-tab="rewards" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">
+                    <i class="fa-solid fa-gift"></i> Canjear Recompensas
+                </button>
+                <button onclick="switchTab('coupons')" data-tab="coupons" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">
+                    <i class="fa-solid fa-ticket"></i> Mis Cupones <span id="nav-coupons-count" class="ml-1 px-1.5 py-0.2 bg-eco-600 text-white text-[10px] rounded-full">0</span>
+                </button>
+                <button onclick="switchTab('containers')" data-tab="containers" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">
+                    <i class="fa-solid fa-map-location-dot"></i> Contenedores Huaraz
+                </button>
+                <button onclick="switchTab('qrposter')" data-tab="qrposter" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">
+                    <i class="fa-solid fa-qrcode"></i> QR Contenedor
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+        <!-- ===================================================================== -->
+        <!-- VISTA 1: PANTALLA DE BIENVENIDA, REGISTRO E INICIO DE SESIÓN          -->
+        <!-- ===================================================================== -->
+        <section id="auth-section" class="space-y-8">
+            <!-- Hero Banner del Proyecto -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-eco-800 via-eco-700 to-emerald-900 text-white p-6 sm:p-10 lg:p-12 shadow-xl">
+                <div class="absolute inset-0 qr-pattern opacity-10"></div>
+                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-7 space-y-5">
+                        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-xs sm:text-sm font-semibold text-eco-100">
+                            <span class="w-2 h-2 rounded-full bg-emerald-300 animate-ping"></span>
+                            Proyecto Emprendedor • Huaraz, Áncash (2026)
+                        </div>
+                        <h1 class="font-display font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight">
+                            Recicla fácil, en cualquier tamaño, y gana <span class="text-amber-300">beneficios al instante</span> en tu propia ciudad.
+                        </h1>
+                        <p class="text-eco-100 text-sm sm:text-base lg:text-lg max-w-2xl leading-relaxed">
+                            Deposita tus botellas plásticas PET (de 500 ml a 2.5 L) en nuestros contenedores inteligentes de Huaraz, acumula <strong>EcoPuntos</strong> automáticamente y canjéalos por descuentos en comercios locales.
+                        </p>
+                        
+                        <!-- Pilares Rápidos -->
+                        <div class="grid grid-cols-3 gap-3 pt-2 max-w-lg">
+                            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/15">
+                                <div class="text-amber-300 font-display font-extrabold text-lg sm:text-xl">500ml–2.5L</div>
+                                <div class="text-[11px] sm:text-xs text-eco-100">Detección PET</div>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/15">
+                                <div class="text-amber-300 font-display font-extrabold text-lg sm:text-xl">100 pts</div>
+                                <div class="text-[11px] sm:text-xs text-eco-100">= Cupón S/ 2.00</div>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/15">
+                                <div class="text-amber-300 font-display font-extrabold text-lg sm:text-xl">ODS 11-13</div>
+                                <div class="text-[11px] sm:text-xs text-eco-100">Huaraz Limpio</div>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex flex-wrap gap-3">
+                            <button onclick="activateDemoMode()" class="px-5 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-extrabold text-sm sm:text-base shadow-lg shadow-amber-500/20 transition flex items-center gap-2 active:scale-95">
+                                <i class="fa-solid fa-play"></i> Probar Demo (Valeria Rojas)
+                            </button>
+                            <button onclick="openContainerQrPoster()" class="px-5 py-3 rounded-2xl bg-white/15 hover:bg-white/25 text-white font-semibold text-sm sm:text-base border border-white/25 transition flex items-center gap-2">
+                                <i class="fa-solid fa-qrcode"></i> Ver QR para Contenedor
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Formulario de Registro / Acceso Rápido -->
+                    <div id="registro-card" class="lg:col-span-5 bg-white text-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100">
+                        <!-- Banner Deep-Linking cuando se escanea desde un contenedor físico -->
+                        <div id="scanned-container-banner" class="hidden mb-5 p-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-400 text-emerald-950 flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div class="text-xs leading-relaxed">
+                                <span class="font-extrabold block text-emerald-900">📍 Escaneado desde: <span id="scanned-container-name">Contenedor Inteligente UCV El Pinar</span></span>
+                                Crea tu cuenta en 10 segundos para vincular tus botellas y sumar EcoPuntos al instante.
+                            </div>
+                        </div>
+
+                        <div class="flex border-b border-slate-200 mb-6">
+                            <button id="tab-register" onclick="toggleAuthMode('register')" class="flex-1 pb-3 text-sm font-extrabold text-eco-600 border-b-2 border-eco-600 transition">
+                                Crear Cuenta
+                            </button>
+                            <button id="tab-login" onclick="toggleAuthMode('login')" class="flex-1 pb-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition">
+                                Iniciar Sesión
+                            </button>
+                        </div>
+
+                        <!-- Formulario Registro -->
+                        <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nombre Completo *</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                                    <input type="text" id="reg-name" required placeholder="Ej. Valeria Rojas" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-eco-500 focus:ring-2 focus:ring-eco-200 outline-none text-sm font-medium">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">DNI o Cód. UCV *</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-id-badge absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                                        <input type="text" id="reg-dni" required placeholder="Ej. 74859612" class="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 focus:border-eco-500 focus:ring-2 focus:ring-eco-200 outline-none text-sm font-medium">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Distrito *</label>
+                                    <select id="reg-district" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-eco-500 focus:ring-2 focus:ring-eco-200 outline-none text-sm font-medium bg-white">
+                                        <option value="Huaraz">Huaraz</option>
+                                        <option value="Independencia">Independencia</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Celular o Correo Electrónico *</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-mobile-screen absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                                    <input type="text" id="reg-contact" required placeholder="Ej. 943123456 o valeria@ucv.edu.pe" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-eco-500 focus:ring-2 focus:ring-eco-200 outline-none text-sm font-medium">
+                                </div>
+                            </div>
+
+                            <div class="bg-eco-50 border border-eco-200 rounded-xl p-3 flex items-center gap-3">
+                                <i class="fa-solid fa-gift text-eco-600 text-lg"></i>
+                                <p class="text-xs text-eco-900 font-medium">
+                                    ¡Bono de bienvenida! Recibe <strong>+20 EcoPuntos</strong> al crear tu Carnet Digital hoy.
+                                </p>
+                            </div>
+
+                            <button type="submit" class="w-full py-3.5 rounded-xl bg-eco-600 hover:bg-eco-700 text-white font-extrabold text-sm shadow-lg shadow-eco-600/25 transition active:scale-98 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-qrcode"></i> Generar mi Carnet QR EcoPuntos
+                            </button>
+                        </form>
+
+                        <!-- Formulario Login -->
+                        <form id="login-form" onsubmit="handleLogin(event)" class="hidden space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">DNI, Código UCV o ID EcoPuntos *</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-id-card absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                                    <input type="text" id="login-dni" required placeholder="Ej. 74859612 o ECO-HZ-2026-001" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:border-eco-500 focus:ring-2 focus:ring-eco-200 outline-none text-sm font-medium">
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-3.5 rounded-xl bg-eco-600 hover:bg-eco-700 text-white font-extrabold text-sm shadow-lg shadow-eco-600/25 transition">
+                                Ingresar a mi Cuenta
+                            </button>
+                            <div class="pt-2 border-t border-slate-100 text-center">
+                                <p class="text-xs text-slate-500 mb-2">¿Vas a exponer el proyecto en clase?</p>
+                                <button type="button" onclick="activateDemoMode()" class="text-xs font-bold text-eco-700 hover:underline">
+                                    Cargar usuario de prueba: Valeria Rojas (Estudiante UCV Huaraz) →
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cómo Funciona el Sistema EcoPuntos (3 Pasos) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition">
+                    <div class="w-12 h-12 rounded-2xl bg-eco-100 text-eco-700 flex items-center justify-center font-display font-extrabold text-xl mb-4">1</div>
+                    <h3 class="font-display font-bold text-lg text-slate-900 mb-2">Escanea tu QR Personal</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">Acércate al contenedor inteligente EcoPuntos (UCV El Pinar, Mercado Central o Plaza de Armas) y escanea tu código QR.</p>
+                </div>
+                <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-display font-extrabold text-xl mb-4">2</div>
+                    <h3 class="font-display font-bold text-lg text-slate-900 mb-2">Deposita Botellas PET</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">Los sensores miden diámetro y volumen (500 ml a 2.5 L), rechazan residuos no plásticos y compactan el envase al instante.</p>
+                </div>
+                <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-display font-extrabold text-xl mb-4">3</div>
+                    <h3 class="font-display font-bold text-lg text-slate-900 mb-2">Canjea en Huaraz</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">Acumula puntos al instante (100 EcoPuntos = S/ 2.00) y canjéalos por descuentos en cafeterías, pasajes, librerías y turismo local.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VISTA 1.5: GENERADOR DE ENLACE Y AFICHE QR PARA EL CONTENEDOR FÍSICO  -->
+        <!-- ===================================================================== -->
+        <section id="qrposter-standalone-section" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <button onclick="closeStandaloneQrPoster()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs sm:text-sm shadow-sm transition">
+                    <i class="fa-solid fa-arrow-left"></i> Volver al Inicio / Registro
+                </button>
+                <span class="text-xs font-bold text-eco-700 bg-eco-50 px-3 py-1.5 rounded-full border border-eco-200">
+                    <i class="fa-solid fa-qrcode mr-1"></i> Kit de Presentación Física
+                </span>
+            </div>
+            <div id="qrposter-mount-standalone"></div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VISTA 2: APLICACIÓN PRINCIPAL (DASHBOARD, SIMULADOR, CANJES, CUPONES)  -->
+        <!-- ===================================================================== -->
+        <div id="app-content" class="hidden space-y-6">
+
+            <!-- TAB A: MI CARNET QR, IMPACTO AMBIENTAL E HISTORIAL -->
+            <section id="view-dashboard" class="tab-view space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Columna Izquierda: Carnet Digital con Código QR Único -->
+                    <div class="lg:col-span-5">
+                        <div class="bg-gradient-to-br from-eco-800 via-eco-700 to-emerald-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden">
+                            <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10 blur-2xl"></div>
+                            <div class="flex justify-between items-start mb-5">
+                                <div>
+                                    <span class="text-[11px] uppercase tracking-widest font-bold text-eco-200">Carnet Digital Ciudadano</span>
+                                    <h2 id="card-user-name" class="font-display font-extrabold text-xl sm:text-2xl mt-0.5">Valeria Rojas</h2>
+                                    <p class="text-xs text-eco-200 flex items-center gap-1.5 mt-1">
+                                        <i class="fa-solid fa-location-dot text-amber-300"></i>
+                                        <span id="card-user-district">Huaraz</span> • DNI/Cód: <span id="card-user-dni" class="font-semibold">74859612</span>
+                                    </p>
+                                </div>
+                                <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
+                                    <i class="fa-solid fa-leaf text-amber-300 text-lg"></i>
+                                </div>
+                            </div>
+
+                            <!-- Contenedor del Código QR Dinámico -->
+                            <div class="bg-white rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-slate-900 shadow-inner">
+                                <div id="user-qr-box" class="w-[180px] h-[180px] flex items-center justify-center bg-white rounded-lg p-1"></div>
+                                <div class="mt-3 text-center">
+                                    <span id="card-user-id" class="font-mono font-extrabold text-sm tracking-wider text-eco-800 bg-eco-50 px-3 py-1 rounded-lg border border-eco-200">ECO-HZ-2026-001</span>
+                                    <p class="text-[11px] text-slate-500 mt-1.5">Escanea este código en el contenedor inteligente</p>
+                                </div>
+                            </div>
+
+                            <!-- Botón Acción Rápida al Simulador -->
+                            <div class="mt-5 grid grid-cols-2 gap-3">
+                                <button onclick="switchTab('simulator')" class="py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-md active:scale-95">
+                                    <i class="fa-solid fa-bottle-water"></i> Depositar Botella
+                                </button>
+                                <button onclick="switchTab('rewards')" class="py-3 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs sm:text-sm border border-white/25 transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-gift"></i> Canjear Puntos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Panel de Saldo e Impacto Ambiental (ODS 11, 12, 13) -->
+                    <div class="lg:col-span-7 flex flex-col justify-between space-y-6">
+                        <!-- Tarjeta Principal de Saldo -->
+                        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm">
+                            <div class="flex flex-wrap justify-between items-center gap-4">
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Saldo Disponible</span>
+                                    <div class="flex items-baseline gap-2 mt-1">
+                                        <span id="stat-points" class="font-display font-extrabold text-4xl sm:text-5xl text-slate-900">120</span>
+                                        <span class="font-display font-bold text-lg text-gold-600">EcoPuntos</span>
+                                    </div>
+                                    <p class="text-xs sm:text-sm text-slate-600 mt-1">
+                                        Equivalente actual en descuentos: <strong id="stat-soles" class="text-eco-700 font-bold">S/ 2.40</strong> en comercios aliados de Huaraz
+                                    </p>
+                                </div>
+                                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-right">
+                                    <div class="text-xs font-bold text-amber-800">Tasa de Conversión</div>
+                                    <div class="font-display font-extrabold text-lg text-amber-600">100 pts = S/ 2.00</div>
+                                    <div class="text-[11px] text-amber-700">Canje inmediato sin esperas</div>
+                                </div>
+                            </div>
+
+                            <!-- Barra de Progreso hacia próximo cupón de S/ 2.00 (100 pts) -->
+                            <div class="mt-6 pt-5 border-t border-slate-100">
+                                <div class="flex justify-between text-xs font-bold mb-1.5">
+                                    <span class="text-slate-600">Progreso para Cupón de S/ 2.00 (100 EcoPuntos)</span>
+                                    <span id="progress-label" class="text-eco-700">100% ¡Listo para canjear!</span>
+                                </div>
+                                <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                                    <div id="progress-bar" class="h-full bg-gradient-to-r from-eco-500 to-amber-400 rounded-full transition-all duration-500" style="width: 100%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Indicadores de Impacto Ecológico Cuantificable -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-slate-500 uppercase">Botellas PET</span>
+                                    <div class="w-8 h-8 rounded-lg bg-eco-50 text-eco-600 flex items-center justify-center">
+                                        <i class="fa-solid fa-bottle-water"></i>
+                                    </div>
+                                </div>
+                                <div id="stat-bottles" class="font-display font-extrabold text-2xl sm:text-3xl text-slate-900">6</div>
+                                <p class="text-[11px] text-eco-700 font-medium mt-1">Evitadas en calles de Huaraz</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-slate-500 uppercase">PET Recuperado</span>
+                                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                        <i class="fa-solid fa-weight-hanging"></i>
+                                    </div>
+                                </div>
+                                <div id="stat-weight" class="font-display font-extrabold text-2xl sm:text-3xl text-slate-900">180 g</div>
+                                <p class="text-[11px] text-blue-700 font-medium mt-1">Compactado para valorización</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-slate-500 uppercase">CO₂ Evitado</span>
+                                    <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                        <i class="fa-solid fa-cloud-sun"></i>
+                                    </div>
+                                </div>
+                                <div id="stat-co2" class="font-display font-extrabold text-2xl sm:text-3xl text-slate-900">0.45 kg</div>
+                                <p class="text-[11px] text-emerald-700 font-medium mt-1">Aporte directo ODS 11, 12 y 13</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historial de Movimientos (Depósitos y Canjes) -->
+                <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                    <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+                        <div>
+                            <h3 class="font-display font-bold text-lg text-slate-900">Historial de Reciclaje y Canjes</h3>
+                            <p class="text-xs text-slate-500">Trazabilidad transparente de tus botellas depositadas en Huaraz</p>
+                        </div>
+                        <span class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-600">Tiempo real</span>
+                    </div>
+                    <div id="history-list" class="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                        <!-- Se llena dinámicamente con JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB B: SIMULADOR INTERACTIVO DEL CONTENEDOR INTELIGENTE -->
+            <section id="view-simulator" class="tab-view hidden space-y-6">
+                <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                        <div>
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-eco-100 text-eco-800 text-xs font-bold mb-2">
+                                <i class="fa-solid fa-microchip"></i> Interfaz de Hardware • Contenedor Inteligente PET
+                            </div>
+                            <h2 class="font-display font-extrabold text-2xl sm:text-3xl text-slate-900">Simulador de Depósito Automatizado</h2>
+                            <p class="text-sm text-slate-600 mt-1">Simula el escaneo de QR, medición por sensores ópticos/diámetro y compactación de botellas.</p>
+                        </div>
+
+                        <!-- Selector de Punto de Acopio en Huaraz -->
+                        <div class="w-full md:w-80">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Punto de Acopio Activo:</label>
+                            <select id="sim-container-select" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 font-semibold text-sm text-slate-800 focus:border-eco-500 outline-none">
+                                <option value="Contenedor #01 - UCV (El Pinar)">📍 Contenedor #01 - UCV (El Pinar)</option>
+                                <option value="Contenedor #02 - Mercado Central Huaraz">📍 Contenedor #02 - Mercado Central Huaraz</option>
+                                <option value="Contenedor #03 - Plaza de Armas Huaraz">📍 Contenedor #03 - Plaza de Armas Huaraz</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-6 items-start">
+                        <!-- Pantalla de la Máquina Inteligente (Izquierda) -->
+                        <div class="lg:col-span-6">
+                            <div class="bg-slate-900 rounded-3xl p-6 text-white shadow-2xl border-4 border-slate-800 relative overflow-hidden">
+                                <!-- Barra superior de estado del hardware -->
+                                <div class="flex justify-between items-center text-xs text-slate-400 pb-4 border-b border-slate-800">
+                                    <span class="flex items-center gap-1.5 font-mono text-emerald-400">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> SENSORES ACTIVOS
+                                    </span>
+                                    <span id="machine-user-badge" class="font-mono bg-slate-800 px-2.5 py-1 rounded-lg text-amber-300">
+                                        QR: SIN ESCANEAR
+                                    </span>
+                                </div>
+
+                                <!-- Visor Central Animado -->
+                                <div id="machine-screen" class="my-6 min-h-[230px] rounded-2xl bg-slate-950/90 border border-slate-800 p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                                    <!-- Estado Inicial: Esperando QR -->
+                                    <div id="screen-idle" class="space-y-4">
+                                        <div class="w-20 h-20 mx-auto rounded-2xl bg-eco-500/10 border-2 border-dashed border-eco-400 flex items-center justify-center relative">
+                                            <i class="fa-solid fa-qrcode text-4xl text-eco-400"></i>
+                                            <div class="absolute inset-x-0 top-0 h-0.5 bg-emerald-400 shadow-[0_0_8px_#34d399] animate-scan-line"></div>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-display font-bold text-lg text-white">Paso 1: Identifícate en el Lector</h3>
+                                            <p class="text-xs text-slate-400 max-w-xs mx-auto mt-1">Escanea tu Carnet QR digital para vincular los EcoPuntos a tu cuenta antes de ingresar botellas.</p>
+                                        </div>
+                                        <button onclick="simulateQrScan()" class="px-5 py-2.5 rounded-xl bg-eco-500 hover:bg-eco-400 text-slate-950 font-extrabold text-sm transition shadow-lg shadow-eco-500/20 active:scale-95">
+                                            <i class="fa-solid fa-expand mr-1.5"></i> Escanear mi QR Ahora
+                                        </button>
+                                    </div>
+
+                                    <!-- Estado Listo para Depositar -->
+                                    <div id="screen-ready" class="hidden space-y-3">
+                                        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl">
+                                            <i class="fa-solid fa-door-open"></i>
+                                        </div>
+                                        <h3 class="font-display font-bold text-lg text-emerald-300">¡Compuerta Desbloqueada!</h3>
+                                        <p class="text-xs text-slate-300 max-w-xs mx-auto">
+                                            Usuario vinculado: <strong id="screen-linked-name" class="text-white">Valeria Rojas</strong>.<br>
+                                            Selecciona a la derecha el envase que deseas introducir en la compuerta PET.
+                                        </p>
+                                    </div>
+
+                                    <!-- Estado Procesando (Sensores + Compactación) -->
+                                    <div id="screen-processing" class="hidden space-y-4 w-full">
+                                        <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-3xl animate-spin">
+                                            <i class="fa-solid fa-gear"></i>
+                                        </div>
+                                        <div>
+                                            <h3 id="process-step-title" class="font-display font-bold text-base sm:text-lg text-amber-300">Analizando diámetro y volumen...</h3>
+                                            <p id="process-step-desc" class="text-xs text-slate-400 mt-1">Verificando polímero PET transparente/color</p>
+                                        </div>
+                                        <div class="w-full max-w-xs mx-auto bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                                            <div id="process-progress" class="h-full bg-amber-400 transition-all duration-300" style="width: 20%"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Estado Resultado Exitoso -->
+                                    <div id="screen-success" class="hidden space-y-3">
+                                        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-3xl animate-bounce-short">
+                                            <i class="fa-solid fa-check"></i>
+                                        </div>
+                                        <div class="inline-block px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 font-display font-extrabold text-sm">
+                                            <span id="result-points-badge">+10 EcoPuntos</span>
+                                        </div>
+                                        <h3 class="font-display font-bold text-lg text-white">¡Botella PET Validada y Compactada!</h3>
+                                        <p id="result-detail-text" class="text-xs text-slate-300">Botella 500 ml • 20g PET recuperados</p>
+                                    </div>
+
+                                    <!-- Estado Rechazo Automático de Residuo No Plástico -->
+                                    <div id="screen-rejected" class="hidden space-y-3">
+                                        <div class="w-16 h-16 mx-auto rounded-full bg-red-500/20 border border-red-500 text-red-400 flex items-center justify-center text-3xl">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                        </div>
+                                        <h3 class="font-display font-bold text-base sm:text-lg text-red-400">Residuo no válido rechazado</h3>
+                                        <p class="text-xs text-slate-300 max-w-xs mx-auto">
+                                            Alerta del sensor: <strong>Solo se aceptan botellas plásticas PET</strong>. Por favor retira el objeto (lata/vidrio/papel) de la compuerta.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Pie de máquina -->
+                                <div class="flex justify-between items-center text-[11px] text-slate-400">
+                                    <span>Sistema de Compactación Interna: <strong>OK</strong></span>
+                                    <button onclick="resetMachineScan()" class="text-slate-300 hover:text-white underline">Finalizar sesión en máquina</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Selección de Botellas PET y Prueba de Sensor (Derecha) -->
+                        <div class="lg:col-span-6 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-display font-bold text-lg text-slate-900">Selecciona envase a depositar</h3>
+                                <span class="text-xs font-semibold text-eco-700 bg-eco-50 px-2.5 py-1 rounded-lg">Reconocimiento automático</span>
+                            </div>
+
+                            <!-- Opción 1: Botella Pequeña -->
+                            <button onclick="depositBottle('small')" class="w-full text-left p-4 rounded-2xl border-2 border-slate-200 hover:border-eco-500 bg-white hover:bg-eco-50/40 transition flex items-center justify-between gap-4 group active:scale-99">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-2xl bg-eco-100 text-eco-700 flex items-center justify-center text-xl group-hover:scale-110 transition">
+                                        <i class="fa-solid fa-bottle-water"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-display font-bold text-base text-slate-900">Botella PET Pequeña (500 ml – 625 ml)</h4>
+                                        <p class="text-xs text-slate-500">Agua personal, gaseosa personal • Peso aprox: 20 g</p>
+                                    </div>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="inline-block px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 font-display font-extrabold text-sm">+10 pts</span>
+                                </div>
+                            </button>
+
+                            <!-- Opción 2: Botella Mediana -->
+                            <button onclick="depositBottle('medium')" class="w-full text-left p-4 rounded-2xl border-2 border-slate-200 hover:border-eco-500 bg-white hover:bg-eco-50/40 transition flex items-center justify-between gap-4 group active:scale-99">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                                        <i class="fa-solid fa-bottle-water"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-display font-bold text-base text-slate-900">Botella PET Mediana (1 L – 1.5 L)</h4>
+                                        <p class="text-xs text-slate-500">Bebida familiar mediana • Peso aprox: 30 g</p>
+                                    </div>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="inline-block px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 font-display font-extrabold text-sm">+15 pts</span>
+                                </div>
+                            </button>
+
+                            <!-- Opción 3: Botella Grande -->
+                            <button onclick="depositBottle('large')" class="w-full text-left p-4 rounded-2xl border-2 border-slate-200 hover:border-eco-500 bg-white hover:bg-eco-50/40 transition flex items-center justify-between gap-4 group active:scale-99">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-3xl group-hover:scale-110 transition">
+                                        <i class="fa-solid fa-bottle-water"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-display font-bold text-base text-slate-900">Botella PET Grande (2 L – 2.5 L)</h4>
+                                        <p class="text-xs text-slate-500">Envase familiar grande • Peso aprox: 45 g</p>
+                                    </div>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="inline-block px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 font-display font-extrabold text-sm">+25 pts</span>
+                                </div>
+                            </button>
+
+                            <!-- Botón de Prueba de Rechazo Automático -->
+                            <div class="pt-2">
+                                <button onclick="depositInvalidItem()" class="w-full p-3.5 rounded-2xl border border-red-200 bg-red-50/70 hover:bg-red-100 text-red-800 transition flex items-center justify-between gap-3 text-left">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl bg-red-200/70 text-red-700 flex items-center justify-center">
+                                            <i class="fa-solid fa-ban"></i>
+                                        </div>
+                                        <div>
+                                            <span class="font-bold text-xs sm:text-sm block">Probar residuo no plástico (Lata / Vidrio / Cartón)</span>
+                                            <span class="text-[11px] text-red-600">Simula el rechazo automático de seguridad del sensor</span>
+                                        </div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-red-400"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB C: CATÁLOGO DE CANJES Y RECOMPENSAS EN COMERCIOS DE HUARAZ -->
+            <section id="view-rewards" class="tab-view hidden space-y-6">
+                <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                        <div>
+                            <h2 class="font-display font-extrabold text-2xl sm:text-3xl text-slate-900">Comercios Aliados en Huaraz</h2>
+                            <p class="text-sm text-slate-600 mt-1">Canjea tus EcoPuntos por vales de descuento reales (<strong>100 EcoPuntos = S/ 2.00</strong>).</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 px-4 py-3 rounded-2xl flex items-center gap-3">
+                            <i class="fa-solid fa-wallet text-2xl text-gold-500"></i>
+                            <div>
+                                <span class="text-[11px] font-bold uppercase text-amber-800 block">Tu Saldo Disponible</span>
+                                <span id="rewards-balance-display" class="font-display font-extrabold text-xl text-slate-900">120 EcoPuntos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtros por Categoría -->
+                    <div class="flex flex-wrap gap-2 my-6">
+                        <button onclick="filterRewards('all')" data-cat="all" class="cat-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-eco-600 text-white transition">Todos</button>
+                        <button onclick="filterRewards('cafeteria')" data-cat="cafeteria" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">☕ Cafeterías y Restaurantes</button>
+                        <button onclick="filterRewards('transporte')" data-cat="transporte" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">🚌 Transporte y Pasajes</button>
+                        <button onclick="filterRewards('universidad')" data-cat="universidad" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">📚 Librerías y Universidad</button>
+                        <button onclick="filterRewards('turismo')" data-cat="turismo" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">🏔️ Turismo y Recreación</button>
+                    </div>
+
+                    <!-- Grid de Recompensas -->
+                    <div id="rewards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Renderizado dinámico con JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB D: MIS CUPONES CANJEADOS -->
+            <section id="view-coupons" class="tab-view hidden space-y-6">
+                <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
+                    <div class="mb-6">
+                        <h2 class="font-display font-extrabold text-2xl sm:text-3xl text-slate-900">Mis Cupones Digitales</h2>
+                        <p class="text-sm text-slate-600 mt-1">Presenta el código QR o alfanumérico en el comercio aliado de Huaraz para hacer válido tu descuento.</p>
+                    </div>
+
+                    <div id="coupons-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Renderizado dinámico -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB E: ESTADO DE CONTENEDORES INTELIGENTES EN HUARAZ Y BUZÓN DE REPORTES -->
+            <section id="view-containers" class="tab-view hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Estado en Tiempo Real de Contenedores -->
+                    <div class="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+                        <div>
+                            <h2 class="font-display font-extrabold text-2xl text-slate-900">Red EcoPuntos en Huaraz</h2>
+                            <p class="text-sm text-slate-600 mt-1">Monitoreo IoT de disponibilidad y nivel de almacenamiento tras compactación interna.</p>
+                        </div>
+
+                        <div id="containers-status-list" class="space-y-4">
+                            <!-- Contenedor 1 -->
+                            <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-3">
+                                <div class="flex flex-wrap justify-between items-start gap-2">
+                                    <div>
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> En línea • Disponible
+                                        </span>
+                                        <h3 class="font-display font-bold text-lg text-slate-900 mt-1">Contenedor #01 — Universidad César Vallejo</h3>
+                                        <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot text-eco-600 mr-1"></i> Campus El Pinar, Independencia, Huaraz</p>
+                                    </div>
+                                    <span class="text-xs font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700">ID: HZ-UCV-01</span>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs font-bold mb-1">
+                                        <span class="text-slate-600">Capacidad ocupada (Compactador activo)</span>
+                                        <span class="text-eco-700">34% (340 / 1,000 botellas)</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-eco-500 rounded-full" style="width: 34%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contenedor 2 -->
+                            <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-3">
+                                <div class="flex flex-wrap justify-between items-start gap-2">
+                                    <div>
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> En línea • Disponible
+                                        </span>
+                                        <h3 class="font-display font-bold text-lg text-slate-900 mt-1">Contenedor #02 — Mercado Central de Huaraz</h3>
+                                        <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot text-eco-600 mr-1"></i> Jr. Simón Bolívar / Av. Raymondi, Huaraz</p>
+                                    </div>
+                                    <span class="text-xs font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700">ID: HZ-MKT-02</span>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs font-bold mb-1">
+                                        <span class="text-slate-600">Capacidad ocupada (Compactador activo)</span>
+                                        <span class="text-amber-600">68% (680 / 1,000 botellas)</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-amber-400 rounded-full" style="width: 68%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contenedor 3 -->
+                            <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-3">
+                                <div class="flex flex-wrap justify-between items-start gap-2">
+                                    <div>
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> En línea • Disponible
+                                        </span>
+                                        <h3 class="font-display font-bold text-lg text-slate-900 mt-1">Contenedor #03 — Plaza de Armas de Huaraz</h3>
+                                        <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot text-eco-600 mr-1"></i> Av. Mariscal Toribio de Luzuriaga, Huaraz</p>
+                                    </div>
+                                    <span class="text-xs font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700">ID: HZ-PLZ-03</span>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs font-bold mb-1">
+                                        <span class="text-slate-600">Capacidad ocupada (Compactador activo)</span>
+                                        <span class="text-eco-700">21% (210 / 1,000 botellas)</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-eco-500 rounded-full" style="width: 21%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Buzón de Reportes e Incidencias (Mantenimiento Inteligente) -->
+                    <div class="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-screwdriver-wrench"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-display font-bold text-xl text-slate-900">Buzón de Reportes</h3>
+                                <p class="text-xs text-slate-500">Mantenimiento inteligente y soporte ciudadano</p>
+                            </div>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-600 mb-5">
+                            ¿Encontraste un contenedor lleno, con sensor bloqueado o tienes problemas con el canje en un comercio aliado? Repórtalo aquí al equipo técnico.
+                        </p>
+
+                        <form onsubmit="handleReportSubmit(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Contenedor o Comercio</label>
+                                <select id="rep-location" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white outline-none focus:border-eco-500">
+                                    <option value="Contenedor #01 - UCV El Pinar">Contenedor #01 - UCV El Pinar</option>
+                                    <option value="Contenedor #02 - Mercado Central">Contenedor #02 - Mercado Central</option>
+                                    <option value="Contenedor #03 - Plaza de Armas">Contenedor #03 - Plaza de Armas</option>
+                                    <option value="Comercio Aliado Huaraz">Comercio Aliado Huaraz</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Tipo de Incidencia</label>
+                                <select id="rep-type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white outline-none focus:border-eco-500">
+                                    <option value="Contenedor lleno / requiere vaciado">Contenedor lleno / requiere vaciado</option>
+                                    <option value="Sensor de reconocimiento lento">Sensor de reconocimiento lento</option>
+                                    <option value="Consulta sobre canje de EcoPuntos">Consulta sobre canje de EcoPuntos</option>
+                                    <option value="Sugerencia de nueva ubicación">Sugerencia de nueva ubicación en Huaraz</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Detalle breve *</label>
+                                <textarea id="rep-detail" rows="3" required placeholder="Describe brevemente lo ocurrido..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:border-eco-500"></textarea>
+                            </div>
+                            <button type="submit" class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-paper-plane"></i> Enviar Reporte Técnico
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB F: GENERADOR DE ENLACE Y AFICHE QR PARA EL CONTENEDOR (DENTRO DE SESIÓN) -->
+            <section id="view-qrposter" class="tab-view hidden space-y-6">
+                <div id="qrposter-mount-tab"></div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- PLANTILLA REUTILIZABLE DEL GENERADOR DE ENLACE Y AFICHE QR PARA CONTENEDOR -->
+    <template id="qrposter-template">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-eco-100 text-eco-800 text-xs font-bold mb-2">
+                        <i class="fa-solid fa-print"></i> Señalética Oficial para Contenedor Inteligente
+                    </div>
+                    <h2 class="font-display font-extrabold text-2xl sm:text-3xl text-slate-900">Enlace y Código QR para el Contenedor</h2>
+                    <p class="text-sm text-slate-600 mt-1">Configura el enlace público de tu web para que cualquier persona escanee el QR desde su celular y se registre al instante.</p>
+                </div>
+            </div>
+
+            <!-- Alerta de Vista Previa Privada + Solución en 15 segundos -->
+            <div id="private-preview-alert" class="hidden rounded-2xl bg-amber-50 border-2 border-amber-300 p-5 space-y-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-lg shrink-0 mt-0.5">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="font-display font-extrabold text-sm sm:text-base text-amber-950">
+                            ⚠️ Estás en una vista previa privada. Un celular externo no puede abrir este enlace interno hasta que subas el archivo web a un hosting gratuito.
+                        </h3>
+                        <p class="text-xs sm:text-sm text-amber-900 leading-relaxed">
+                            Para que el QR funcione en el celular del jurado o público durante tu exposición, descarga este archivo HTML y súbelo gratis (sin crear cuenta) arrastrándolo a <strong>Netlify Drop (app.netlify.com/drop)</strong> o <strong>Tiiny.host</strong> en 15 segundos:
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 pl-0 sm:pl-13">
+                    <button onclick="downloadStandaloneHtml()" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs sm:text-sm shadow-md transition flex items-center gap-2 active:scale-95">
+                        <i class="fa-solid fa-download text-amber-400"></i> ⬇️ Descargar archivo web (index.html)
+                    </button>
+                    <a href="https://app.netlify.com/drop" target="_blank" rel="noopener noreferrer" class="px-4 py-2.5 rounded-xl bg-white hover:bg-amber-100 text-amber-950 border border-amber-300 font-bold text-xs sm:text-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Netlify Drop
+                    </a>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Panel de Configuración del Enlace (Izquierda) -->
+                <div class="lg:col-span-6 space-y-5">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">1. Selecciona el Contenedor Físico:</label>
+                        <select id="qr-container-select" onchange="updateContainerQrConfig()" class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-sm text-slate-800 focus:border-eco-500 outline-none">
+                            <option value="UCV-01" data-label="Contenedor #01 - UCV El Pinar">📍 Contenedor #01 — UCV El Pinar (Huaraz)</option>
+                            <option value="MKT-02" data-label="Contenedor #02 - Mercado Central">📍 Contenedor #02 — Mercado Central Huaraz</option>
+                            <option value="PLZ-03" data-label="Contenedor #03 - Plaza de Armas">📍 Contenedor #03 — Plaza de Armas Huaraz</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">2. Enlace público de tu web (HTTPS):</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-globe absolute left-3.5 top-3.5 text-eco-600 text-sm"></i>
+                            <input type="url" id="qr-public-base-url" oninput="updateContainerQrConfig()" placeholder="Ej. https://ecopuntos-huaraz.netlify.app" class="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-eco-300 focus:border-eco-600 outline-none text-sm font-semibold text-slate-900 bg-white">
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">
+                            Pega aquí el enlace que te dé Netlify Drop, Tiiny.host o GitHub Pages. El código QR se actualizará al instante.
+                        </p>
+                    </div>
+
+                    <!-- URL Final Generada con Deep-Linking -->
+                    <div class="bg-slate-900 rounded-2xl p-4 text-white space-y-2.5">
+                        <div class="flex items-center justify-between text-[11px] text-slate-400">
+                            <span class="font-bold uppercase tracking-wider text-emerald-400">Enlace Directo al Registro (Escaneado en QR):</span>
+                            <span class="font-mono">?contenedor & registro=1</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="qr-generated-full-url" readonly class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-amber-300 outline-none">
+                            <button onclick="copyGeneratedContainerUrl()" title="Copiar enlace" class="px-3.5 py-2 rounded-xl bg-eco-600 hover:bg-eco-500 text-white font-bold text-xs shrink-0 transition">
+                                <i class="fa-solid fa-copy mr-1"></i> Copiar
+                            </button>
+                        </div>
+                        <div class="pt-1 flex flex-wrap gap-2">
+                            <a id="qr-test-link-btn" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 hover:text-emerald-200 underline">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Probar enlace en nueva pestaña
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Exportación del Afiche -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <button onclick="downloadContainerQrPng()" class="py-3.5 px-4 rounded-xl bg-eco-600 hover:bg-eco-700 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-eco-600/20 transition flex items-center justify-center gap-2 active:scale-95">
+                            <i class="fa-solid fa-image"></i> Descargar QR (PNG)
+                        </button>
+                        <button onclick="printContainerPoster()" class="py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs sm:text-sm shadow-lg transition flex items-center justify-center gap-2 active:scale-95">
+                            <i class="fa-solid fa-print"></i> Imprimir Afiche A4
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Vista Previa del Afiche Físico para Pegar en el Contenedor (Derecha) -->
+                <div class="lg:col-span-6 flex justify-center">
+                    <div id="printable-container-poster" class="w-full max-w-sm rounded-3xl bg-gradient-to-b from-eco-800 via-eco-700 to-emerald-900 p-6 text-white shadow-2xl border-4 border-eco-500 text-center space-y-4">
+                        <div class="flex items-center justify-center gap-2">
+                            <div class="w-9 h-9 rounded-xl bg-white text-eco-700 flex items-center justify-center text-lg shadow">
+                                <i class="fa-solid fa-recycle"></i>
+                            </div>
+                            <span class="font-display font-extrabold text-2xl tracking-tight">Eco<span class="text-amber-300">Puntos</span></span>
+                        </div>
+
+                        <div class="bg-white/15 backdrop-blur-sm rounded-2xl py-2 px-3 border border-white/20">
+                            <span class="text-[11px] uppercase tracking-widest font-bold text-eco-100 block">Contenedor Inteligente PET</span>
+                            <span id="poster-container-title" class="font-display font-extrabold text-sm text-amber-300">Contenedor #01 — UCV El Pinar</span>
+                        </div>
+
+                        <h3 class="font-display font-extrabold text-xl leading-snug">
+                            ¡ESCANEA, RECICLA Y GANA DESCUENTOS EN HUARAZ!
+                        </h3>
+
+                        <!-- Caja Blanca con Código QR Real Escaneable -->
+                        <div class="bg-white rounded-3xl p-5 mx-auto inline-flex flex-col items-center justify-center shadow-xl border-4 border-amber-400">
+                            <div id="container-real-qr-box" class="w-[210px] h-[210px] flex items-center justify-center bg-white"></div>
+                            <span class="mt-2.5 text-[11px] font-extrabold uppercase tracking-wider text-eco-800 bg-eco-50 px-3 py-1 rounded-full border border-eco-200">
+                                <i class="fa-solid fa-camera mr-1"></i> Apunta con la cámara de tu celular
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-[11px] font-bold pt-1">
+                            <div class="bg-white/10 rounded-xl p-2">
+                                <span class="text-amber-300 block text-sm">500 ml</span> +10 pts
+                            </div>
+                            <div class="bg-white/10 rounded-xl p-2">
+                                <span class="text-amber-300 block text-sm">1.5 L</span> +15 pts
+                            </div>
+                            <div class="bg-white/10 rounded-xl p-2">
+                                <span class="text-amber-300 block text-sm">2.5 L</span> +25 pts
+                            </div>
+                        </div>
+
+                        <p class="text-[11px] text-eco-100 font-medium">
+                            100 EcoPuntos = Cupón S/ 2.00 en comercios aliados • Huaraz, Áncash
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- MODAL DE CUPÓN CANJEADO (Muestra QR y Código Alfanumérico para el Comercio) -->
+    <div id="coupon-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative animate-bounce-short">
+            <button onclick="closeCouponModal()" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center space-y-4">
+                <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-100 text-eco-700 flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-ticket"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-eco-600">¡Canje Exitoso!</span>
+                    <h3 id="modal-coupon-title" class="font-display font-extrabold text-xl text-slate-900 mt-1">Cupón S/ 2.00 Cafetería Aliada</h3>
+                    <p id="modal-coupon-merchant" class="text-xs text-slate-500 mt-0.5">Mercado Central / Av. Luzuriaga, Huaraz</p>
+                </div>
+
+                <div class="bg-slate-50 border-2 border-dashed border-eco-300 rounded-2xl p-4 flex flex-col items-center">
+                    <div id="modal-coupon-qr-box" class="w-[150px] h-[150px] flex items-center justify-center bg-white p-1 rounded-lg"></div>
+                    <span id="modal-coupon-code" class="mt-3 font-mono font-extrabold text-base tracking-widest text-slate-900 bg-white px-4 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                        ECO-CUP-9821
+                    </span>
+                </div>
+
+                <p class="text-xs text-slate-500">
+                    Muestra este código en caja del comercio aliado de Huaraz. También quedó guardado en <strong>"Mis Cupones"</strong>.
+                </p>
+
+                <button onclick="closeCouponModal()" class="w-full py-3 rounded-xl bg-eco-600 hover:bg-eco-700 text-white font-bold text-sm transition">
+                    Entendido, ver Mis Cupones
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie de Página -->
+    <footer class="bg-white border-t border-slate-200 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+            <div class="flex items-center gap-2 font-semibold text-slate-700">
+                <i class="fa-solid fa-recycle text-eco-600"></i>
+                <span>EcoPuntos — Contenedores Inteligentes (Huaraz, Áncash, Perú)</span>
+            </div>
+            <p class="italic text-slate-600">"Reciclar hoy, construye un mejor mañana."</p>
+            <div>UCV • Ing. Industrial y Administración (2026)</div>
+        </div>
+    </footer>
+
+    <!-- LÓGICA DE LA APLICACIÓN -->
+    <script>
+        // =========================================================================
+        // 1. DATOS MAESTROS DEL PROYECTO (RECOMPENSAS Y CONFIGURACIÓN PET)
+        // =========================================================================
+        const REWARDS_CATALOG = [
+            {
+                id: 'rew-1',
+                title: 'Cupón S/ 2.00 en Cafetería / Juguería Aliada',
+                merchant: 'Juguería y Café El Nevado • Mercado Central / Av. Luzuriaga',
+                category: 'cafeteria',
+                categoryLabel: 'Cafeterías y Restaurantes',
+                points: 100,
+                discount: 'S/ 2.00',
+                icon: 'fa-mug-hot',
+                color: 'bg-amber-100 text-amber-700'
+            },
+            {
+                id: 'rew-2',
+                title: 'Cupón S/ 2.00 en Pasajes Urbanos Huaraz',
+                merchant: 'Línea Urbana El Pinar – Independencia – Centro Huaraz',
+                category: 'transporte',
+                categoryLabel: 'Transporte y Pasajes',
+                points: 100,
+                discount: 'S/ 2.00',
+                icon: 'fa-bus',
+                color: 'bg-blue-100 text-blue-700'
+            },
+            {
+                id: 'rew-3',
+                title: 'Cupón S/ 4.00 en Librería y Copias Universitarias',
+                merchant: 'Multiservicios El Pinar • Frente a UCV Huaraz',
+                category: 'universidad',
+                categoryLabel: 'Librerías y Universidad',
+                points: 200,
+                discount: 'S/ 4.00',
+                icon: 'fa-book-open',
+                color: 'bg-purple-100 text-purple-700'
+            },
+            {
+                id: 'rew-4',
+                title: 'Cupón S/ 5.00 en Pollería / Restaurante Local',
+                merchant: 'Brasas Andinas Huaraz • Jr. José de Sucre',
+                category: 'cafeteria',
+                categoryLabel: 'Cafeterías y Restaurantes',
+                points: 250,
+                discount: 'S/ 5.00',
+                icon: 'fa-utensils',
+                color: 'bg-orange-100 text-orange-700'
+            },
+            {
+                id: 'rew-5',
+                title: 'Cupón S/ 10.00 en Tour Mirador Rataquenua / Wilcahuain',
+                merchant: 'Cordillera Blanca Tours • Parque Ginebra, Huaraz',
+                category: 'turismo',
+                categoryLabel: 'Turismo y Recreación',
+                points: 500,
+                discount: 'S/ 10.00',
+                icon: 'fa-mountain-sun',
+                color: 'bg-emerald-100 text-emerald-700'
+            }
+        ];
+
+        const BOTTLE_SPECS = {
+            small: { label: 'Botella PET Pequeña (500 ml – 625 ml)', points: 10, weightGrams: 20, co2Grams: 50 },
+            medium: { label: 'Botella PET Mediana (1 L – 1.5 L)', points: 15, weightGrams: 30, co2Grams: 75 },
+            large: { label: 'Botella PET Grande (2 L – 2.5 L)', points: 25, weightGrams: 45, co2Grams: 112 }
+        };
+
+        // Estado global de la aplicación
+        let currentUser = null;
+        let isMachineScanned = false;
+        let currentRewardFilter = 'all';
+        let scannedContainerFromUrl = null;
+
+        const CONTAINER_MAP = {
+            'UCV-01': {
+                shortName: 'Contenedor #01 — UCV El Pinar',
+                simOption: 'Contenedor #01 - UCV (El Pinar)'
+            },
+            'MKT-02': {
+                shortName: 'Contenedor #02 — Mercado Central Huaraz',
+                simOption: 'Contenedor #02 - Mercado Central Huaraz'
+            },
+            'PLZ-03': {
+                shortName: 'Contenedor #03 — Plaza de Armas Huaraz',
+                simOption: 'Contenedor #03 - Plaza de Armas Huaraz'
+            }
+        };
+
+        // =========================================================================
+        // 2. INICIALIZACIÓN, DEEP-LINKING (?registro=1&contenedor=...) Y PERSISTENCIA
+        // =========================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            handleUrlDeepLinking();
+
+            const savedUser = localStorage.getItem('ecopuntos_active_user');
+            if (savedUser && !scannedContainerFromUrl) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    renderAppLoggedIn();
+                } catch (e) {
+                    console.error('Error al cargar sesión:', e);
+                }
+            }
+        });
+
+        function handleUrlDeepLinking() {
+            const params = new URLSearchParams(window.location.search);
+            const containerCode = params.get('contenedor');
+            const isRegisterParam = params.get('registro');
+
+            if (containerCode || isRegisterParam === '1') {
+                const info = CONTAINER_MAP[containerCode] || {
+                    shortName: containerCode ? `Contenedor Inteligente (${containerCode})` : 'Contenedor Inteligente EcoPuntos Huaraz',
+                    simOption: 'Contenedor #01 - UCV (El Pinar)'
+                };
+                scannedContainerFromUrl = info;
+
+                // Forzar pantalla de inicio en pestaña "Crear Cuenta"
+                toggleAuthMode('register');
+                const banner = document.getElementById('scanned-container-banner');
+                const nameEl = document.getElementById('scanned-container-name');
+                if (banner && nameEl) {
+                    nameEl.textContent = info.shortName;
+                    banner.classList.remove('hidden');
+                }
+
+                // Preseleccionar contenedor en el simulador
+                const simSelect = document.getElementById('sim-container-select');
+                if (simSelect && info.simOption) {
+                    simSelect.value = info.simOption;
+                }
+
+                // Hacer scroll suave al formulario de registro en móviles
+                setTimeout(() => {
+                    const regCard = document.getElementById('registro-card');
+                    if (regCard) regCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 250);
+            }
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value.trim();
+            const dni = document.getElementById('reg-dni').value.trim();
+            const district = document.getElementById('reg-district').value;
+            const contact = document.getElementById('reg-contact').value.trim();
+
+            const randomNum = Math.floor(100 + Math.random() * 900);
+            currentUser = {
+                id: `ECO-HZ-2026-${randomNum}`,
+                name,
+                dni,
+                district,
+                contact,
+                points: 20, // Bono de bienvenida
+                bottles: 0,
+                weightGrams: 0,
+                co2Grams: 0,
+                history: [
+                    {
+                        type: 'bonus',
+                        title: 'Bono de Bienvenida EcoPuntos Huaraz',
+                        detail: 'Registro inicial de Carnet Digital',
+                        location: 'Plataforma Web EcoPuntos',
+                        points: +20,
+                        date: formatNow()
+                    }
+                ],
+                coupons: []
+            };
+
+            saveUserState();
+            renderAppLoggedIn();
+
+            // Si venía escaneado desde un contenedor físico, preseleccionarlo y llevar al simulador
+            if (scannedContainerFromUrl) {
+                const simSelect = document.getElementById('sim-container-select');
+                if (simSelect) simSelect.value = scannedContainerFromUrl.simOption;
+                switchTab('simulator');
+                simulateQrScan();
+                showToast(`¡Registro completado! Vinculado automáticamente a ${scannedContainerFromUrl.shortName}.`, 'success');
+            } else {
+                showToast('¡Bienvenido(a) a EcoPuntos! Se creó tu Carnet QR con +20 puntos de regalo.', 'success');
+            }
+        }
+
+        function activateDemoMode() {
+            currentUser = {
+                id: 'ECO-HZ-2026-001',
+                name: 'Valeria Rojas',
+                dni: '74859612',
+                district: 'Huaraz',
+                contact: 'valeria.rojas@ucv.edu.pe',
+                points: 120,
+                bottles: 6,
+                weightGrams: 180,
+                co2Grams: 450,
+                history: [
+                    {
+                        type: 'deposit',
+                        title: 'Botella PET Grande (2 L – 2.5 L)',
+                        detail: '45 g PET compactados • Sensor OK',
+                        location: 'Contenedor #01 - UCV (El Pinar)',
+                        points: +25,
+                        date: 'Hoy, 10:15 AM'
+                    },
+                    {
+                        type: 'deposit',
+                        title: 'Botella PET Mediana (1 L – 1.5 L)',
+                        detail: '30 g PET compactados • Sensor OK',
+                        location: 'Contenedor #02 - Mercado Central Huaraz',
+                        points: +15,
+                        date: 'Ayer, 04:40 PM'
+                    },
+                    {
+                        type: 'deposit',
+                        title: 'Botella PET Pequeña (500 ml – 625 ml)',
+                        detail: '20 g PET compactados • Sensor OK',
+                        location: 'Contenedor #03 - Plaza de Armas Huaraz',
+                        points: +10,
+                        date: '19 Nov 2026, 01:20 PM'
+                    }
+                ],
+                coupons: [
+                    {
+                        code: 'ECO-HZ-7429',
+                        title: 'Cupón S/ 2.00 en Pasajes Urbanos Huaraz',
+                        merchant: 'Línea Urbana El Pinar – Independencia – Centro Huaraz',
+                        discount: 'S/ 2.00',
+                        date: '18 Nov 2026',
+                        status: 'Activo'
+                    }
+                ]
+            };
+
+            saveUserState();
+            renderAppLoggedIn();
+            switchTab('simulator');
+            showToast('Modo Presentación activado: Perfil de Valeria Rojas (120 EcoPuntos cargados).', 'info');
+        }
+
+        function logoutUser() {
+            currentUser = null;
+            isMachineScanned = false;
+            localStorage.removeItem('ecopuntos_active_user');
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('qrposter-standalone-section').classList.add('hidden');
+            document.getElementById('app-content').classList.add('hidden');
+            document.getElementById('main-nav').classList.add('hidden');
+            document.getElementById('header-points-badge').classList.add('hidden');
+            document.getElementById('header-points-badge').classList.remove('flex');
+            document.getElementById('btn-logout').classList.add('hidden');
+            showToast('Sesión cerrada correctamente.', 'info');
+        }
+
+        function saveUserState() {
+            if (currentUser) {
+                localStorage.setItem('ecopuntos_active_user', JSON.stringify(currentUser));
+            }
+        }
+
+        function toggleAuthMode(mode) {
+            const tabReg = document.getElementById('tab-register');
+            const tabLog = document.getElementById('tab-login');
+            const formReg = document.getElementById('register-form');
+            const formLog = document.getElementById('login-form');
+            if (!tabReg || !tabLog || !formReg || !formLog) return;
+
+            if (mode === 'register') {
+                tabReg.className = 'flex-1 pb-3 text-sm font-extrabold text-eco-600 border-b-2 border-eco-600 transition';
+                tabLog.className = 'flex-1 pb-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition';
+                formReg.classList.remove('hidden');
+                formLog.classList.add('hidden');
+            } else {
+                tabLog.className = 'flex-1 pb-3 text-sm font-extrabold text-eco-600 border-b-2 border-eco-600 transition';
+                tabReg.className = 'flex-1 pb-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition';
+                formLog.classList.remove('hidden');
+                formReg.classList.add('hidden');
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const query = document.getElementById('login-dni').value.trim();
+            if (!query) return;
+
+            const saved = localStorage.getItem('ecopuntos_active_user');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.dni === query || parsed.id.toLowerCase() === query.toLowerCase()) {
+                        currentUser = parsed;
+                        renderAppLoggedIn();
+                        showToast(`¡Bienvenido(a) de nuevo, ${currentUser.name}!`, 'success');
+                        return;
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
+            if (query === '74859612' || query.toUpperCase() === 'ECO-HZ-2026-001') {
+                activateDemoMode();
+                return;
+            }
+
+            showToast('Usuario no encontrado en este navegador. Crea una cuenta nueva o usa el Modo Demo.', 'error');
+        }
+
+        // =========================================================================
+        // 4. RENDERIZADO DE UI Y GENERACIÓN DE CÓDIGO QR ESCANEABLE
+        // =========================================================================
+        function renderAppLoggedIn() {
+// ... existing code ... -->
+            // Renderizar historial
+            const historyEl = document.getElementById('history-list');
+            if (historyEl) {
+                if (!currentUser.history || currentUser.history.length === 0) {
+                    historyEl.innerHTML = `<p class="text-xs text-slate-500 py-6 text-center">Aún no tienes movimientos registrados.</p>`;
+                } else {
+                    historyEl.innerHTML = currentUser.history.map(item => {
+                        const isPositive = item.points >= 0;
+                        const iconClass = item.type === 'redeem'
+                            ? 'fa-ticket bg-amber-100 text-amber-700'
+                            : (item.type === 'bonus' ? 'fa-gift bg-purple-100 text-purple-700' : 'fa-bottle-water bg-eco-100 text-eco-700');
+                        return `
+                            <div class="py-3.5 flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconClass.split(' ').slice(1).join(' ')}">
+                                        <i class="fa-solid ${iconClass.split(' ')[0]}"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-xs sm:text-sm text-slate-900 truncate">${item.title}</p>
+                                        <p class="text-[11px] text-slate-500 truncate">${item.location} • ${item.date}</p>
+                                    </div>
+                                </div>
+                                <span class="font-display font-extrabold text-xs sm:text-sm shrink-0 px-2.5 py-1 rounded-lg ${isPositive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}">
+                                    ${isPositive ? '+' + item.points : item.points} pts
+                                </span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        // Generador de Código QR Real (Estándar ISO/IEC 18004) escaneable por celulares
+        function renderRealQrCode(containerId, textValue, size = 180, darkColor = '#0f172a') {
+// ... existing code ... -->
